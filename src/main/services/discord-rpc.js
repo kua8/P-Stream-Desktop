@@ -192,7 +192,6 @@ class DiscordRPCService {
     }
 
     const activity = {
-      name: this._getActivityName(metadata),
       details: this._getMediaTitle(metadata),
       state: 'Loading...',
       startTimestamp: new Date(),
@@ -314,7 +313,6 @@ class DiscordRPCService {
 
     const activity = {
       type: DISCORD_ACTIVITY_TYPE_WATCHING,
-      name: args.name ?? 'P-Stream',
       state: args.state ?? undefined,
       details: args.details ?? undefined,
       timestamps,
