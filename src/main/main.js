@@ -1,4 +1,4 @@
-const { app, ipcMain, nativeImage, session } = require('electron');
+const { app, ipcMain, nativeImage, session, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -118,6 +118,13 @@ async function initialize() {
         logger.warn('Failed to enable WARP on launch', { error: err.message });
       });
     }
+
+    // Register global shortcut for settings (Ctrl+, or Cmd+,)
+    globalShortcut.register('CommandOrControl+,', () => {
+      if (windowManager) {
+        windowManager.createSettingsWindow();
+      }
+    });
 
     logger.info('Application initialized successfully');
   } catch (error) {
@@ -304,6 +311,9 @@ function applyVolumeBoost(webContents, val) {
 }
 
 app.on('window-all-closed', async () => {
+  // Unregister all shortcuts
+  globalShortcut.unregisterAll();
+  
   if (discordRPC) {
     await discordRPC.disconnect().catch(() => {});
   }

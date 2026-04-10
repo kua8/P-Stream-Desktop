@@ -12,7 +12,7 @@ Desktop app for PStream that provides enhanced streaming capabilities.
 
 ## Installation
 
-Download the latest [release](https://github.com/YOUR_USERNAME/pstream/releases)
+Download the latest [release](https://github.com/kua8/P-Stream-Desktop/releasess)
 
 For **MacOS** it will fail to open, go to Settings > Privacy and Security, and press `Open Anyway`. Confirm with password or Touch ID!
 
@@ -46,7 +46,7 @@ The built files will be available in the `dist/` directory.
 
 The project uses GitHub Actions for automated building and releasing. When you create a new release on GitHub, the workflow will automatically:
 
-1. Build the app for all platforms (Linux, Windows, macOS)
+1. Build the app for all platforms (Linux and MacOS will be added at a later date)
 2. Build for both x64 and ARM64 architectures where supported
 3. Upload all binaries to the GitHub release
 
