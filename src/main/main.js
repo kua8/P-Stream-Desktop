@@ -73,7 +73,7 @@ async function initialize() {
     ipcHandlers.setupInterceptors(session.defaultSession, {
       getStreamHostname: () => {
         try {
-          const url = storage.get('streamUrl', 'pstream.mov');
+          const url = storage.get('streamUrl', 'pstream.net');
           return new URL(url.startsWith('http') ? url : `https://${url}`).hostname;
         } catch {
           return null;

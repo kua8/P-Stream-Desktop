@@ -42,6 +42,7 @@ class WindowManager {
       minWidth: DEFAULT_MAIN_WINDOW_MIN_WIDTH,
       minHeight: DEFAULT_MAIN_WINDOW_MIN_HEIGHT,
       frame: false,
+      title: 'P-Stream',
       webPreferences: { contextIsolation: true },
       backgroundColor: '#0d0d0d',
       ...(this.appIcon ? { icon: this.appIcon } : {}),
@@ -121,6 +122,7 @@ class WindowManager {
       height: DEFAULT_SETTINGS_WINDOW_HEIGHT,
       resizable: false,
       frame: false,
+      title: 'P-Stream Settings',
       webPreferences: {
         preload: path.join(__dirname, '../../preload/preload.js'),
         contextIsolation: true,
@@ -152,6 +154,7 @@ class WindowManager {
       height: DEFAULT_SETUP_WINDOW_HEIGHT,
       resizable: false,
       frame: false,
+      title: 'P-Stream Setup',
       webPreferences: {
         preload: path.join(__dirname, '../../preload/preload.js'),
         contextIsolation: true,

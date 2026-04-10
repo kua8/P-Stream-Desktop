@@ -1,7 +1,7 @@
 {
   "name": "pstream",
   "version": "1.0.0",
-  "description": "PStream",
+  "description": "P-Stream",
   "author": "pstream",
   "main": "src/main/main.js",
   "scripts": {
@@ -14,7 +14,7 @@
   },
   "build": {
     "appId": "com.pstream.app",
-    "productName": "PStream",
+    "productName": "P-Stream",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "dist"

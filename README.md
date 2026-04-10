@@ -1,10 +1,10 @@
-# PStream Desktop
+# P-Stream Desktop
 
-Desktop app for PStream that provides enhanced streaming capabilities.
+Desktop app for P-Stream that provides enhanced streaming capabilities.
 
 ## Features
 
-- Native desktop wrapper for PStream
+- Native desktop wrapper for P-Stream
 - Enhanced streaming capabilities
 - Automatic update checking from GitHub releases
 - Discord Rich Presence integration

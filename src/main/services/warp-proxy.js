@@ -412,7 +412,11 @@ BindAddress = ${this.proxyHost}:${this.proxyPort + 1}
       });
 
       this.wireproxyProcess.stderr.on('data', (data) => {
-        this.logger.warn('wireproxy stderr', { output: data.toString().trim() });
+        // Suppress debug output, only log actual errors
+        const output = data.toString().trim();
+        if (!output.startsWith('DEBUG:')) {
+          this.logger.warn('wireproxy stderr', { output });
+        }
       });
 
       this.wireproxyProcess.on('error', (error) => {
