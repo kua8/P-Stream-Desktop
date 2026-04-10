@@ -44,6 +44,12 @@ class DiscordRPCService {
    */
   async initialize() {
     try {
+      // Only initialize if enabled
+      if (!this._isEnabled()) {
+        this.logger.info('Discord RPC is disabled, skipping initialization');
+        return;
+      }
+
       DiscordRPC.register(DISCORD_CLIENT_ID);
       
       this.client = new DiscordRPC.Client({ transport: 'ipc' });
@@ -432,9 +438,23 @@ class DiscordRPCService {
     this.store.set('discordRPCEnabled', enabled);
 
     if (enabled) {
+      // Initialize if not already done
+      if (!this.client) {
+        try {
+          DiscordRPC.register(DISCORD_CLIENT_ID);
+          this.client = new DiscordRPC.Client({ transport: 'ipc' });
+          this.client.on('ready', () => this._handleReady());
+          this.client.on('disconnected', () => this._handleDisconnected());
+          await this.connect();
+        } catch (error) {
+          this.logger.error('Failed to initialize Discord RPC', error);
+          return false;
+        }
+      }
       await this.updateActivity(this.currentMediaMetadata);
     } else {
       await this.clearActivity();
+      await this.disconnect();
     }
 
     return true;
