@@ -6,8 +6,8 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const { NetworkError } = require('../utils/errors');
 
-const GITHUB_OWNER = 'p-stream';
-const GITHUB_REPO = 'p-stream-desktop';
+const GITHUB_OWNER = 'kua8';
+const GITHUB_REPO = 'P-Stream-Desktop';
 const DEFAULT_TIMEOUT = 10000;
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_RETRY_DELAY = 2000;

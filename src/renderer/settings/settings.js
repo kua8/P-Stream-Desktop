@@ -25,7 +25,7 @@ function setWarpStatusText(status) {
   const el = document.getElementById('warp-status');
   if (!el) return;
   if (status.enabled) {
-    el.textContent = `Connected via ${status.proxyHost}:${status.proxyPort}`;
+    el.textContent = `Connected via ${status.host}:${status.port}`;
     el.className = 'status-text connected';
   } else if (status.error) {
     el.textContent = `Error: ${status.error}`;
