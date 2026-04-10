@@ -1,0 +1,186 @@
+name: Build and Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      draft_release:
+        description: 'Create draft release'
+        required: false
+        type: boolean
+        default: false
+      version:
+        description: 'Version tag (optional)'
+        required: false
+        type: string
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Linux ${{ matrix.arch }}
+        run: |
+          if [ "${{ matrix.arch }}" = "x64" ]; then
+            npm run build:linux -- --x64
+          else
+            npm run build:linux -- --${{ matrix.arch }}
+          fi
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pstream-linux-${{ matrix.arch }}
+          path: dist/*.AppImage
+          retention-days: 30
+
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows ${{ matrix.arch }}
+        shell: bash
+        run: |
+          if [ "${{ matrix.arch }}" = "x64" ]; then
+            npm run build:win -- --x64
+          else
+            npm run build:win -- --${{ matrix.arch }}
+          fi
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pstream-windows-${{ matrix.arch }}
+          path: |
+            dist/*.exe
+            dist/*.zip
+          retention-days: 30
+
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build macOS ${{ matrix.arch }}
+        run: |
+          if [ "${{ matrix.arch }}" = "x64" ]; then
+            npm run build:mac -- --x64
+          else
+            npm run build:mac -- --${{ matrix.arch }}
+          fi
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pstream-macos-${{ matrix.arch }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+          retention-days: 30
+
+  release:
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || github.event.inputs.draft_release == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create draft release (if triggered manually)
+        if: github.event.inputs.draft_release == 'true'
+        run: |
+          VERSION_TAG="${{ github.event.inputs.version }}"
+          if [ -z "$VERSION_TAG" ]; then
+            VERSION_TAG="draft-${{ github.run_number }}"
+          fi
+
+          gh release create "$VERSION_TAG" \
+            --title "Draft Release ${{ github.run_number }}" \
+            --notes "Automated draft release" \
+            --draft \
+            --prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Upload Release Assets
+        run: |
+          if [ "${{ github.event.inputs.draft_release }}" = "true" ]; then
+            VERSION_TAG="${{ github.event.inputs.version }}"
+            if [ -z "$VERSION_TAG" ]; then
+              RELEASE_TAG="draft-${{ github.run_number }}"
+            else
+              RELEASE_TAG="$VERSION_TAG"
+            fi
+          else
+            RELEASE_TAG="${{ github.event.release.tag_name }}"
+          fi
+
+          echo "Uploading to release: $RELEASE_TAG"
+
+          for file in ./artifacts/*/*; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              echo "Uploading $filename..."
+              gh release upload "$RELEASE_TAG" "$file" --clobber
+            fi
+          done
+
+          echo "All artifacts uploaded successfully"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
