@@ -106,11 +106,13 @@ async function initialize() {
         if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
         storage.set('streamUrl', u);
         setupWindow.close();
-        windowManager.createMainWindow(u);
+        const mainWin = windowManager.createMainWindow(u);
+        discordRPC.setTitlebarWebContents(windowManager.getTitlebarContents());
       });
     } else {
       const url = streamUrl.startsWith('http') ? streamUrl : `https://${streamUrl}`;
       windowManager.createMainWindow(url);
+      discordRPC.setTitlebarWebContents(windowManager.getTitlebarContents());
     }
 
     if (storage.get('warpLaunchEnabled', false)) {

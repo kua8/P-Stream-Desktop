@@ -134,8 +134,6 @@ class IPCHandlers {
 
     this.updateRule(payload);
     
-    this.logger.info('Stream prepared successfully', { ruleId: payload.ruleId });
-    
     return {};
   }
 

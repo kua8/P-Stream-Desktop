@@ -12,16 +12,30 @@
       border-bottom:1px solid rgba(255,255,255,0.05);
       font-family:'Inter',sans-serif;user-select:none;overflow:hidden;
     }
-    span{color:#555;font-size:11px;letter-spacing:0.08em;font-weight:500;}
+    span{color:#555;font-size:11px;letter-spacing:0.08em;font-weight:500;max-width:calc(100vw - 200px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .btns{display:flex;gap:7px;align-items:center;-webkit-app-region:no-drag;}
-    button{width:12px;height:12px;border-radius:50%;border:none;cursor:pointer;padding:0;}
+    button{width:12px;height:12px;border-radius:50%;border:none;cursor:pointer;padding:0;transition:transform 0.15s ease,opacity 0.15s ease,box-shadow 0.15s ease;}
+    button:hover{transform:scale(1.15);opacity:0.85;}
+    button:active{transform:scale(0.95);}
     .min{background:#f59e0b;}
+    .min:hover{box-shadow:0 0 8px rgba(245,158,11,0.6);}
     .max{background:#22c55e;}
+    .max:hover{box-shadow:0 0 8px rgba(34,197,94,0.6);}
     .cls{background:#ef4444;}
+    .cls:hover{box-shadow:0 0 8px rgba(239,68,68,0.6);}
   </style>
 </head>
 <body>
-  <div style="display:flex;align-items:center;gap:7px;"><img src="logo.png" width="16" height="16" style="border-radius:3px;" draggable="false"/><span>PSTREAM</span></div>
+  <div style="display:flex;align-items:center;gap:7px;"><img src="logo.png" width="16" height="16" style="border-radius:3px;" draggable="false"/><span id="titleText" title="PSTREAM">PSTREAM</span></div>
+  <script>
+    window.electronAPI.onTitleUpdate?.((title) => {
+      const el = document.getElementById('titleText');
+      if (el) {
+        el.textContent = title || 'PSTREAM';
+        el.title = title || 'PSTREAM';
+      }
+    });
+  </script>
   <div class="btns">
     <button class="min" onclick="window.electronAPI.minimizeWindow()"></button>
     <button class="max" onclick="window.electronAPI.maximizeWindow()"></button>

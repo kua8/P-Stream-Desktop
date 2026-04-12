@@ -168,17 +168,11 @@ class DiscordRPCService {
   }
 
   /**
-   * Validate media metadata before sending
+   * Validate media metadata before sending — just needs a title or artist
    */
   _validateMetadata(metadata) {
-    if (!metadata) {
-      return false;
-    }
-
-    const hasTitle = metadata.title && typeof metadata.title === 'string';
-    const hasProgress = metadata.currentTime != null || metadata.duration != null;
-    
-    return hasTitle || hasProgress;
+    if (!metadata) return false;
+    return !!(metadata.title || metadata.artist);
   }
 
   /**
@@ -197,13 +191,23 @@ class DiscordRPCService {
       };
     }
 
+    let largeImageKey = 'logo';
+    if (metadata.poster && typeof metadata.poster === 'string') {
+      if (metadata.poster.startsWith('https://') || metadata.poster.startsWith('http://')) {
+        largeImageKey = metadata.poster;
+      }
+    }
+
+    const activityName = metadata.artist || metadata.title || 'P-Stream';
+
     const activity = {
+      name: activityName,
       details: this._getMediaTitle(metadata),
       state: 'Loading...',
       startTimestamp: new Date(),
-      largeImageKey: metadata.poster || 'logo',
+      largeImageKey,
       largeImageText: metadata.artist || metadata.title || 'P-Stream',
-      smallImageKey: 'logo',
+      smallImageKey: 'logo_no_bg',
       smallImageText: 'P-Stream',
       instance: false,
       buttons: [{ label: 'Use P-Stream', url: this._getStreamUrl() }],
@@ -219,8 +223,11 @@ class DiscordRPCService {
       }
       activity.state = 'Watching';
     } else if (metadata.isPlaying === false) {
-      activity.startTimestamp = new Date();
-      activity.endTimestamp = undefined;
+      const currentTimeSec = Number(metadata.currentTime);
+      if (Number.isFinite(currentTimeSec)) {
+        const nowMs = Date.now();
+        activity.startTimestamp = Math.round(nowMs - currentTimeSec * 1000);
+      }
       activity.state = 'Paused';
     }
 
@@ -251,13 +258,64 @@ class DiscordRPCService {
   }
 
   /**
-   * Get media title from metadata
+   * Get media title from metadata (shown as Discord "details")
+   * Format: "Show | S3 E5" or just "Movie Title"
    */
   _getMediaTitle(metadata) {
     if (!metadata?.title) {
       return 'P-Stream';
     }
-    return metadata.artist ? `${metadata.artist} - ${metadata.title}` : metadata.title;
+
+    const hasSeason = metadata.season != null && !isNaN(metadata.season);
+    const hasEpisode = metadata.episode != null && !isNaN(metadata.episode);
+
+    if (metadata.artist) {
+      // TV show: "Show | S3 E5" 
+      if (hasSeason && hasEpisode) {
+        return `${metadata.artist} | S${metadata.season} E${metadata.episode}`;
+      }
+      return metadata.artist;
+    }
+
+    return metadata.title;
+  }
+
+  /**
+   * Get formatted title for window titlebar
+   * e.g. "Breaking Bad · S3 E5 · Paused" or "Inception · Watching"
+   */
+  _getTitlebarText(metadata) {
+    if (!metadata?.title) {
+      return 'PSTREAM';
+    }
+
+    const parts = [];
+
+    // Show name (artist) or movie title
+    if (metadata.artist) {
+      parts.push(metadata.artist);
+    } else {
+      parts.push(metadata.title);
+    }
+
+    // Season / episode
+    const hasSeason = metadata.season != null && !isNaN(metadata.season);
+    const hasEpisode = metadata.episode != null && !isNaN(metadata.episode);
+    if (hasSeason && hasEpisode) {
+      parts.push(`S${metadata.season} E${metadata.episode}`);
+    } else if (metadata.artist && metadata.title) {
+      // episode title when no S/E numbers
+      parts.push(metadata.title);
+    }
+
+    // Playback state
+    if (metadata.isPlaying === true) {
+      parts.push('Watching');
+    } else if (metadata.isPlaying === false) {
+      parts.push('Paused');
+    }
+
+    return parts.join(' · ');
   }
 
   /**
@@ -319,6 +377,7 @@ class DiscordRPCService {
 
     const activity = {
       type: DISCORD_ACTIVITY_TYPE_WATCHING,
+      name: args.name ?? 'P-Stream',
       state: args.state ?? undefined,
       details: args.details ?? undefined,
       timestamps,
@@ -345,13 +404,37 @@ class DiscordRPCService {
     }
 
     if (metadata && !this._validateMetadata(metadata)) {
-      this.logger.debug('Invalid metadata, skipping update');
       return;
     }
 
     this.currentMediaMetadata = metadata;
     const activity = this._buildActivity(metadata);
     await this._setActivityRaw(activity);
+    
+    this._updateTitlebar(metadata);
+  }
+
+  /**
+   * Set the titlebar webContents reference so we can send IPC events to it
+   * @param {Electron.WebContents} webContents
+   */
+  setTitlebarWebContents(webContents) {
+    this._titlebarWebContents = webContents;
+  }
+
+  /**
+   * Update the main window titlebar with current media info
+   */
+  _updateTitlebar(metadata) {
+    try {
+      const wc = this._titlebarWebContents;
+      if (wc && !wc.isDestroyed()) {
+        const text = this._getTitlebarText(metadata);
+        wc.send('update-title', text);
+      }
+    } catch (error) {
+      this.logger.debug('Failed to update titlebar', { error: error.message });
+    }
   }
 
   /**
@@ -369,21 +452,28 @@ class DiscordRPCService {
     try {
       await this.client.clearActivity();
       this.currentMediaMetadata = null;
+      this._updateTitlebar(null); // Reset titlebar to default
     } catch (error) {
       this.state = ConnectionState.DISCONNECTED;
       this._logError('Failed to clear activity', error);
     }
   }
 
-  /**
-   * Handle media metadata update from IPC
-   */
   async handleMediaMetadataUpdate(data) {
     try {
-      const hasMetadata = data?.metadata && (data.metadata.title || data.metadata.artist);
-      const hasProgress = data?.progress && (data.progress.currentTime != null || data.progress.duration != null);
+      if (data === null || data === undefined) {
+        this.currentMediaMetadata = null;
+        await this.updateActivity(null);
+        return { success: true };
+      }
 
-      if (!hasMetadata || !hasProgress) {
+      const meta = data.metadata ?? data;
+      const prog = data.progress ?? data;
+
+      const hasTitle = meta.title || meta.artist;
+      const hasProgress = prog.currentTime != null || prog.duration != null;
+
+      if (!hasTitle && !hasProgress) {
         this.currentMediaMetadata = null;
         await this.updateActivity(null);
         return { success: true };
@@ -393,31 +483,15 @@ class DiscordRPCService {
         this.currentMediaMetadata = {};
       }
 
-      if (data.metadata) {
-        Object.assign(this.currentMediaMetadata, {
-          title: data.metadata.title ?? this.currentMediaMetadata.title,
-          artist: data.metadata.artist ?? this.currentMediaMetadata.artist,
-          poster: data.metadata.poster ?? this.currentMediaMetadata.poster,
-          season: data.metadata.season != null && !isNaN(data.metadata.season) 
-            ? data.metadata.season 
-            : this.currentMediaMetadata.season,
-          episode: data.metadata.episode != null && !isNaN(data.metadata.episode) 
-            ? data.metadata.episode 
-            : this.currentMediaMetadata.episode,
-        });
-      }
+      if (meta.title != null)  this.currentMediaMetadata.title  = meta.title;
+      if (meta.artist != null) this.currentMediaMetadata.artist = meta.artist;
+      if (meta.poster != null) this.currentMediaMetadata.poster = meta.poster;
+      if (meta.season  != null && !isNaN(meta.season))  this.currentMediaMetadata.season  = meta.season;
+      if (meta.episode != null && !isNaN(meta.episode)) this.currentMediaMetadata.episode = meta.episode;
 
-      if (data.progress) {
-        Object.assign(this.currentMediaMetadata, {
-          currentTime: data.progress.currentTime != null && !isNaN(data.progress.currentTime) 
-            ? data.progress.currentTime 
-            : this.currentMediaMetadata.currentTime,
-          duration: data.progress.duration != null && !isNaN(data.progress.duration) 
-            ? data.progress.duration 
-            : this.currentMediaMetadata.duration,
-          isPlaying: data.progress.isPlaying ?? this.currentMediaMetadata.isPlaying,
-        });
-      }
+      if (prog.currentTime != null && !isNaN(prog.currentTime)) this.currentMediaMetadata.currentTime = prog.currentTime;
+      if (prog.duration    != null && !isNaN(prog.duration))    this.currentMediaMetadata.duration    = prog.duration;
+      if (prog.isPlaying   != null) this.currentMediaMetadata.isPlaying = prog.isPlaying;
 
       await this.updateActivity(this.currentMediaMetadata);
       return { success: true };

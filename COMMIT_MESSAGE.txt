@@ -1,0 +1,19 @@
+feat: Complete Discord RPC overhaul with automatic media detection (v1.0.2)
+
+Major improvements:
+- Rewrote Discord RPC integration with real-time media metadata extraction
+- Automatic progress tracking with live timestamps and poster images
+- Fixed paused state to freeze progress bar correctly
+- Dynamic titlebar updates showing current media and playback state
+- Proper state management: Watching/Paused/Browsing
+
+Technical changes:
+- Injected content script for automatic video monitoring
+- MediaSession API integration for metadata extraction
+- Fixed ruleId validation to accept numbers
+- Removed auto-opening DevTools
+- Cleaned up excessive debug logging
+
+Known issues:
+- Native app recognition temporarily disabled
+- Userscript injection disabled (to be fixed in next patch)

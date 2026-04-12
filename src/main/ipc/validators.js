@@ -89,8 +89,8 @@ class PayloadValidators {
       });
     }
 
-    if (!payload.ruleId || typeof payload.ruleId !== 'string') {
-      throw new ValidationError('Invalid payload: ruleId must be a non-empty string', {
+    if (payload.ruleId == null || (typeof payload.ruleId !== 'string' && typeof payload.ruleId !== 'number')) {
+      throw new ValidationError('Invalid payload: ruleId must be a string or number', {
         received: typeof payload.ruleId
       });
     }

@@ -24,3 +24,7 @@ npm-debug.log*
 # Environment
 .env
 .env.local
+
+# Development reference files
+Notes
+inspo.js
