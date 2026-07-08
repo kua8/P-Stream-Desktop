@@ -28,3 +28,14 @@ npm-debug.log*
 # Development reference files
 Notes
 inspo.js
+
+# Documentation and README files
+README.md
+QUICK-START.md
+FEATURES.md
+CHANGES.md
+NATIVEAPP-FIX.md
+NATIVEAPP-FIX-SUMMARY.md
+TEST-NATIVEAPP.md
+TEST-NATIVEAPP-CHECKLIST.md
+*.md
